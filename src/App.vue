@@ -2,12 +2,12 @@
   <!-- 樂高台灣：從 K30DayMapChallenge 2026 Day 27 搬出來的手機版（做法同 birth-lottery）。
        整個畫面就是舞台（樂高 3D／AR），上面浮著標題和 3D｜AR 切換，下面浮著操作列；
        房間、設定、資訊（零件表、說明）是從下面拉上來的面板。 -->
-  <div class="phone">
-    <div class="stage">
+  <div class="phone" :style="{ '--top-h': `${insets.top}px` }">
+    <div class="stage" @pointerdown="tipOn = false">
       <template v-if="mode === '3d'">
         <Mansion3D ref="scene" look="lego" :labels="labels" :walls="walls" :view="view" :roof="roof" :outer="outer" :court="court" :night="night" :active="active" :hover="hover"
                    :inset-top="insets.top" :inset-bottom="insets.bottom"
-                   @hover="(id) => (hover = id)" @select="select" @parts="(p) => (parts = p)" @ready="ready = true" />
+                   @hover="(id) => (hover = id)" @select="select" @parts="(p) => (parts = p)" @ready="onReady" />
         <Transition name="fade">
           <div v-if="!ready" class="loading">
             <div class="bricks"><i></i><i></i><i></i></div>
@@ -34,10 +34,22 @@
     <Transition name="fade">
       <div v-if="mode === '3d' && tip && ready" class="room-card" :style="{ bottom: `${insets.bottom + 10}px` }">
         <div><b>{{ tip.name }}</b><span>{{ tip.county }}</span><p>{{ tip.why }}</p></div>
-        <button v-if="active" type="button" class="x" aria-label="關閉" @click="active = null">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none" /></svg>
-        </button>
+        <!-- 選到房間時：上一間、下一間（照房間列表的順序）、關閉回到原本的視角 -->
+        <nav v-if="active" class="rc-nav">
+          <button type="button" class="x" aria-label="關閉" @click="active = null">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none" /></svg>
+          </button>
+          <div>
+            <button type="button" class="x" aria-label="上一間" @click="step(-1)"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M14.5 6l-6 6 6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" /></svg></button>
+            <button type="button" class="x" aria-label="下一間" @click="step(1)"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9.5 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" /></svg></button>
+          </div>
+        </nav>
       </div>
+    </Transition>
+
+    <!-- 第一次進來：怎麼操作（動一下畫面或 6 秒後消失） -->
+    <Transition name="fade">
+      <p v-if="mode === '3d' && ready && tipOn && !tip" class="gesture" :style="{ bottom: `${insets.bottom + 12}px` }">{{ LOW ? '一指旋轉・兩指平移縮放・點房間看介紹' : '左鍵旋轉・右鍵平移・滾輪縮放・點房間看介紹' }}</p>
     </Transition>
 
     <footer v-show="mode === '3d'" ref="dockEl" class="dock">
@@ -134,6 +146,7 @@ import BottomSheet from './components/BottomSheet.vue'
 import { ROOMS, HALL } from './lego/layout.js'
 import { LEGO_PAL } from './lego/looks.js'
 import { SOURCES } from './lego/sources.js'
+import { LOW } from './lib/device.js'
 
 const VERSION = __APP_VERSION__, BUILT = __APP_BUILT__
 const CloseBtn = () => h('button', { type: 'button', class: 'x', 'aria-label': '關閉' }, [
@@ -149,6 +162,10 @@ function setMode(m) {
   mode.value = m
   active.value = hover.value = sheet.value = null
   history.replaceState(null, '', m === 'ar' ? '#ar' : location.pathname + location.search)
+}
+const onKey = (e) => {
+  if (e.key === 'Escape') { if (sheet.value) sheet.value = null; else active.value = null }
+  else if (active.value && !sheet.value && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) step(e.key === 'ArrowLeft' ? -1 : 1)
 }
 const onHash = () => setMode(location.hash === '#ar' ? 'ar' : '3d')
 
@@ -166,6 +183,11 @@ const byId = Object.fromEntries(rooms.map((r) => [r.id, r]))
 byId[HALL] = { county: '走廊', name: '紅地毯走廊', why: '北邊東西向、中間南北向（中央山脈），中庭四周是玻璃迴廊' }
 const tip = computed(() => byId[active.value ?? hover.value] ?? null)
 const select = (id) => (active.value = active.value === id ? null : id)
+function step(d) { const i = rooms.findIndex((r) => r.id === active.value); active.value = rooms[(i + d + rooms.length) % rooms.length].id }
+// 操作提示：房子蓋好後顯示，動一下畫面或 6 秒後消失（每次開網頁只出現一次）
+const tipOn = ref(false)
+let tipShown = false
+function onReady() { ready.value = true; if (!tipShown) { tipShown = tipOn.value = true; setTimeout(() => (tipOn.value = false), 6000) } }
 function setView(k) { view.value = k; active.value = null }
 function nextView() { const ks = Object.keys(VIEWS); setView(ks[(ks.indexOf(view.value) + 1) % ks.length]) }
 
@@ -183,6 +205,7 @@ onMounted(() => {
   ro.observe(topEl.value); ro.observe(dockEl.value); ro.observe(document.documentElement)
   measure()
   window.addEventListener('hashchange', onHash)
+  window.addEventListener('keydown', onKey)
 })
-onBeforeUnmount(() => { ro?.disconnect(); window.removeEventListener('hashchange', onHash) })
+onBeforeUnmount(() => { ro?.disconnect(); window.removeEventListener('hashchange', onHash); window.removeEventListener('keydown', onKey) })
 </script>

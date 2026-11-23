@@ -4,6 +4,7 @@
        iPhone 沒有事先做 usdz：按 AR 時 model-viewer 從畫面上的模型現做（屋頂、外牆、房名照當下的樣子） -->
   <div ref="box" class="ar-box" :style="{ '--ar-top': `${insetTop + 8}px`, '--ar-bottom': `${insetBottom + 18}px` }">
     <p v-if="failed" class="ar-fail">AR 元件載不到（要連得到 unpkg.com），請檢查網路後重新整理</p>
+    <p v-if="note" class="ar-note" :class="{ warn: note.warn }">{{ note.text }}</p>
     <div v-if="!LOW && qrSvg" class="qr-card">
       <div class="qr" v-html="qrSvg"></div>
       <p>用手機掃 QR code<br>把房子放在你的桌上</p>
@@ -29,7 +30,7 @@ const PARTS = {
   label: { label: '房名', modes: { on: '開', off: '關' } },
 }
 const mode = reactive({ roof: 'auto', wall: 'auto', label: 'on' })
-const box = ref(null), failed = ref(false), qrSvg = ref('')
+const box = ref(null), failed = ref(false), qrSvg = ref(''), note = ref(null)
 let mv = null
 
 function apply() {
@@ -90,7 +91,11 @@ onMounted(async () => {
   if (!box.value) return // 載入時已經離開這頁
   mv = document.createElement('model-viewer')
   for (const [k, v] of Object.entries({ src: glb, alt: '樂高台灣：用樂高蓋的台灣豪宅', ar: '', 'ar-modes': 'webxr scene-viewer quick-look', 'ar-scale': 'auto', 'min-camera-orbit': 'auto auto 0.03m', 'camera-controls': '', 'touch-action': 'none', 'auto-rotate': '', 'shadow-intensity': '1', 'camera-orbit': '30deg 55deg auto', exposure: '1.1' })) mv.setAttribute(k, v)
-  mv.addEventListener('load', () => { mv.__k = {}; mv.__r0 = mv.getCameraOrbit().radius; apply() })
+  mv.addEventListener('load', () => {
+    mv.__k = {}; mv.__r0 = mv.getCameraOrbit().radius; apply()
+    // 手機上開不了 AR（例如 LINE、Facebook 的內建瀏覽器）：說一聲，3D 預覽照樣可以轉
+    note.value = LOW && !mv.canActivateAR ? { warn: true, text: '這個瀏覽器開不了 AR：iPhone 請用 Safari、Android 請用 Chrome 打開' } : { text: LOW ? '一指旋轉・兩指縮放' : '拖曳旋轉・滾輪縮放' }
+  })
   mv.addEventListener('ar-status', (e) => {
     const s = e.detail.status
     mv.__xr = s === 'session-started' || s === 'object-placed'

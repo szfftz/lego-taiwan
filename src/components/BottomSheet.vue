@@ -26,10 +26,11 @@ const emit = defineEmits(['close'])
 
 // 往下拖：拖的距離跟著手指；放開時超過 80px 就收起來（按到按鈕不算拖）
 const CLOSE_AT = 80
+const SIDE = matchMedia('(min-width: 900px), (orientation: landscape) and (max-height: 520px)')
 const dragY = ref(0)
 let y0 = null
 function start(e) {
-  if (e.target.closest('button')) return
+  if (e.target.closest('button') || SIDE.matches) return // 側欄（寬螢幕、手機橫式，見 style.css 的 RWD）不用往下拖
   y0 = e.clientY
   e.currentTarget.setPointerCapture(e.pointerId)
 }

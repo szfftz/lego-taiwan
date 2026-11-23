@@ -1349,6 +1349,24 @@ function resize() {
   if (k !== lastFit && !userMoved && VIEWS[props.view]) { lastFit = k; const v = viewOf(props.view); camera.position.set(...v.pos); controls.target.set(...v.target) }
   camera.updateProjectionMatrix()
 }
+// 標籤不要疊在一起：每 6 格檢查一次，照優先順序（選到／滑到的房間 → 房名，離鏡頭近的先 → 人物）一個個放，
+//   跟已經放好的重疊就藏起來（淡出）；被上面標題列、下面操作列擋住的也藏
+let tick = 0
+function declutter() {
+  if (!labeler || !wrap.value) return
+  const W = wrap.value.clientWidth, H = wrap.value.clientHeight, PAD = 3
+  const els = [...labeler.domElement.children].filter((el) => el.style.display !== 'none')
+  const rank = (el) => (el.classList.contains('on') ? 2e6 : el.classList.contains('who') ? 0 : 1e6) + (+el.style.zIndex || 0)
+  const placed = []
+  for (const el of els.sort((a, b) => rank(b) - rank(a))) {
+    const r = el.getBoundingClientRect(), b = wrap.value.getBoundingClientRect()
+    const x0 = r.left - b.left - PAD, x1 = r.right - b.left + PAD, y0 = r.top - b.top - PAD, y1 = r.bottom - b.top + PAD
+    const on = el.classList.contains('on')
+    const hid = !on && (y0 < props.insetTop || y1 > H - props.insetBottom || x1 < 0 || x0 > W || placed.some((q) => x0 < q[1] && x1 > q[0] && y0 < q[3] && y1 > q[2]))
+    el.classList.toggle('hid', hid)
+    if (!hid) placed.push([x0, x1, y0, y1])
+  }
+}
 function frame() {
   raf = requestAnimationFrame(frame)
   for (const f of tickers) f(performance.now() / 1000) // 會動的東西（視聽室的影片）
@@ -1369,6 +1387,7 @@ function frame() {
   updateRoof()
   composer ? composer.render() : renderer.render(scene, camera)
   labeler.render(scene, camera)
+  if (++tick % 6 === 0) declutter()
 }
 
 onMounted(async () => {
@@ -1473,13 +1492,15 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.mansion { position: absolute; inset: 0; background: #9fd6ef; overflow: hidden; }
+.mansion { position: absolute; inset: 0; background: #9fd6ef; overflow: hidden; isolation: isolate; touch-action: none; }
 .obj-tip { position: absolute; z-index: 5; pointer-events: none; padding: 3px 8px; border-radius: 6px; background: rgba(20, 30, 40, 0.88); color: #fff; font-size: 12px; white-space: nowrap; }
 .mansion :deep(canvas) { display: block; }
-.mansion :deep(.d25-labels) { position: absolute; inset: 0; }
+.mansion :deep(.d25-labels) { position: absolute; inset: 0; z-index: 1; overflow: hidden; isolation: isolate; }
 :global(.d25-label) { display: flex; flex-direction: column; align-items: center; pointer-events: none; padding: 2px 8px; border-radius: 10px;
   background: rgba(255, 255, 255, 0.9); color: #1d3b4f; font-size: 12px; line-height: 1.3; white-space: nowrap; border: 2px solid #3ddc5a; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
-:global(.d25-label span) { font-size: 10px; color: #5b6b75; }
+:global(.d25-label) { font-weight: 700; transition: opacity 0.18s; }
+:global(.d25-label.hid) { opacity: 0; }
+:global(.d25-label span) { font-weight: 400; font-size: 10px; color: #5b6b75; }
 :global(.d25-label.who) { padding: 1px 6px; font-size: 11px; border-color: #ff9800; background: #fff8e1; }
 :global(.d25-label.on) { background: #3ddc5a; color: #0f2a14; }
 :global(.d25-label.on span) { color: #1d4a24; }
