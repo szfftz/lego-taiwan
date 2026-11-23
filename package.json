@@ -1,0 +1,25 @@
+{
+  "name": "lego-taiwan",
+  "private": true,
+  "version": "1.0.0",
+  "homepage": "https://szfftz.github.io/logo-taiwan/",
+  "type": "module",
+  "scripts": {
+    "serve": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "bash deploy.sh",
+    "fetch:ldraw": "node scripts/fetch-ldraw.mjs",
+    "export:ar": "node scripts/export_ar.mjs"
+  },
+  "dependencies": {
+    "qrcode-generator": "^1.4.4",
+    "three": "^0.170.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.0",
+    "puppeteer-core": "^25.12.0",
+    "vite": "^6.0.0"
+  }
+}
