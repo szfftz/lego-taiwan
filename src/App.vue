@@ -16,24 +16,17 @@
           </div>
         </Transition>
       </template>
-      <ArView v-else :inset-top="insets.top" :inset-bottom="insets.bottom" />
+      <ArView v-else ref="arView" :active="active" :inset-top="insets.top" :inset-bottom="insets.bottom" @can-ar="(v) => (canAr = v)" />
     </div>
 
     <header ref="topEl" class="top">
-      <h1 class="brand"><span class="studs"><i></i><i></i><i></i><i></i></span>{{ L('LEGO Taiwan', '樂高台灣') }}</h1>
-      <nav class="seg" :aria-label="L('Mode', '模式')">
-        <button type="button" :class="{ on: mode === '3d' }" @click="setMode('3d')">3D</button>
-        <button type="button" :class="{ on: mode === 'ar' }" @click="setMode('ar')">AR</button>
-      </nav>
+      <h1 class="brand"><button type="button" :aria-label="L('About LEGO Taiwan', '樂高台灣：說明')" @click="sheet = 'info'"><span class="studs"><i></i><i></i><i></i><i></i></span>{{ L('LEGO Taiwan', '樂高台灣') }}</button></h1>
       <button type="button" class="round lang" :aria-label="L('切換成中文', 'Switch to English')" @click="setLang(lang === 'en' ? 'zh' : 'en')">{{ L('中', 'EN') }}</button>
-      <button type="button" class="round" :aria-label="L('Info', '資訊')" @click="sheet = 'info'">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 11v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /><circle cx="12" cy="7" r="1.5" fill="currentColor" /></svg>
-      </button>
     </header>
 
     <!-- 選到（或滑鼠移到）的房間 -->
     <Transition name="fade">
-      <div v-if="mode === '3d' && tip && ready" class="room-card" :style="{ bottom: `${insets.bottom + 10}px` }">
+      <div v-if="tip && (mode === 'ar' || ready)" class="room-card" :style="{ bottom: `${insets.bottom + 10}px` }">
         <div><b>{{ tip.name }}</b><span>{{ tip.county }}</span><p>{{ tip.why }}</p></div>
         <!-- 選到房間時：上一間、下一間（照房間列表的順序）、關閉回到原本的視角 -->
         <nav v-if="active" class="rc-nav">
@@ -53,17 +46,24 @@
       <p v-if="mode === '3d' && ready && tipOn && !tip" class="gesture" :style="{ bottom: `${insets.bottom + 12}px` }">{{ LOW ? L('Drag to rotate · two fingers to pan and zoom · tap a room', '一指旋轉・兩指平移縮放・點房間看介紹') : L('Left-drag rotate · right-drag pan · scroll zoom · click a room', '左鍵旋轉・右鍵平移・滾輪縮放・點房間看介紹') }}</p>
     </Transition>
 
-    <footer v-show="mode === '3d'" ref="dockEl" class="dock">
-      <RoomStrip :rooms="roomsT" :active="active" @select="(id) => (active = id)" />
-      <button type="button" class="brick yellow" @click="sheet = 'rooms'">{{ L('Rooms', '房間') }}<small>{{ L('Full list', '列表・介紹') }}</small></button>
-      <button type="button" class="brick white" @click="nextView">{{ L('View', '視角') }}<small>{{ VIEWS[view] }}</small></button>
-      <button type="button" class="brick white" @click="sheet = 'settings'">{{ L('Settings', '設定') }}<small>{{ L('Walls, roof, night', '牆・屋頂・夜景') }}</small></button>
-      <button type="button" class="brick red" @click="setMode('ar')">AR<small>{{ L('On your table', '放在桌上') }}</small></button>
+    <!-- 操作列：3D＝房間、視角、設定、AR；AR＝房間、全景、在桌上看（這個裝置開得了 AR 才有） -->
+    <footer ref="dockEl" class="dock" :class="{ ar: mode === 'ar' }">
+      <button type="button" class="brick yellow" :class="{ wide: mode === 'ar' && !canAr }" @click="sheet = 'rooms'">{{ L('Rooms', '房間') }}<small>{{ L('Tap to zoom in', '點一間拉近') }}</small></button>
+      <template v-if="mode === '3d'">
+        <button type="button" class="brick white" @click="nextView">{{ L('View', '視角') }}<small>{{ VIEWS[view] }}</small></button>
+        <button type="button" class="brick white" @click="sheet = 'settings'">{{ L('Settings', '設定') }}<small>{{ L('Walls, roof, night', '牆・屋頂・夜景') }}</small></button>
+        <button type="button" class="brick red" @click="setMode('ar')">AR<small>{{ L('On your table', '放在桌上') }}</small></button>
+      </template>
+      <template v-else>
+        <button type="button" class="brick white" @click="active = null">{{ L('Overview', '全景') }}<small>{{ L('Zoom back out', '拉遠看整棟') }}</small></button>
+        <button type="button" class="brick white" @click="setMode('3d')">3D<small>{{ L('Real bricks', '真的零件') }}</small></button>
+        <button v-if="canAr" type="button" class="brick red" @click="arView?.activate()">{{ L('View in AR', '在桌上看') }}<small>{{ L('Point at a table', '鏡頭對著桌面') }}</small></button>
+      </template>
     </footer>
 
     <!-- 房間 -->
     <BottomSheet :open="sheet === 'rooms'" :label="L('Rooms', '房間')" @close="sheet = null">
-      <template #head><h2>{{ L('Rooms', '房間') }}<small>{{ L('Tap to fly there', '點一下飛過去') }}</small></h2><CloseBtn @click="sheet = null" /></template>
+      <template #head><h2>{{ L('Rooms', '房間') }}<small>{{ L('Tap to zoom in', '點一間拉近過去') }}</small></h2><CloseBtn @click="sheet = null" /></template>
       <main class="content">
         <ul class="rooms">
           <li v-for="rm in roomsT" :key="rm.id" :class="{ on: active === rm.id }" @click="select(rm.id); sheet = null">
@@ -89,6 +89,10 @@
         <div class="opt"><span>{{ L('Download', '下載') }}</span><div class="chips">
           <button type="button" @click="scene?.download('lego-taiwan.png')">PNG</button>
           <button type="button" @click="scene?.downloadLdr('lego-taiwan.ldr')">LDR</button>
+        </div></div>
+        <div class="opt"><span>{{ L('Info', '資訊') }}</span><div class="chips">
+          <button type="button" @click="tab = 'about'; sheet = 'info'">{{ L('About', '說明') }}</button>
+          <button type="button" @click="tab = 'parts'; sheet = 'info'">{{ L('Parts list', '零件表') }}</button>
         </div></div>
         <p class="hint">{{ L('Roof and outer walls on “Auto”: the roof fades as you zoom in, then the outer walls when you get very close. The LDR file opens in BrickLink Studio.', '屋頂、外牆「自動」：鏡頭拉近時屋頂先慢慢消失，拉得很近外牆也消失。LDR 可以用 BrickLink Studio 打開。') }}</p>
       </main>
@@ -118,8 +122,8 @@
           <p>{{ rooms.length }} counties and cities, {{ rooms.length }} rooms. The rooms are laid out by each county's latitude and longitude, so the floor plan is a map of Taiwan, and every room holds what that county is known for.</p>
           <h3>How to play</h3>
           <ul>
-            <li><b>3D</b>: drag with one finger to rotate, two fingers to pan and zoom (desktop: left-drag rotate, right-drag pan, scroll zoom). Tap a room, or pick one from the row of rooms, to fly there.</li>
-            <li><b>AR</b>: on a phone, tap “View on your table (AR)” and point the camera at a table. The whole house (about 25 × 19 cm) sits on it, and you can walk around and lean in. Use Safari on iPhone, Chrome on Android.</li>
+            <li><b>3D</b>: drag with one finger to rotate, two fingers to pan and zoom (desktop: left-drag rotate, right-drag pan, scroll zoom). Tap a room, or pick one from the Rooms list, to fly there.</li>
+            <li><b>AR</b>: on a phone, tap “View in AR” and point the camera at a table. The whole house (about 25 × 19 cm) sits on it, and you can walk around and lean in. Use Safari on iPhone, Chrome on Android.</li>
           </ul>
           <h3>How it is calculated</h3>
           <p class="formula">Studs = length ÷ 0.4 m<br>Wall height = 6 brick courses = 18 plates = 2.88 m</p>
@@ -141,8 +145,8 @@
           <p>{{ rooms.length }} 個縣市、{{ rooms.length }} 個房間：房間照縣市的經緯度排，平面圖就是台灣地圖，每間房都放那個縣市的特色。</p>
           <h3>怎麼玩</h3>
           <ul>
-            <li><b>3D</b>：一指拖曳旋轉、兩指平移和縮放（電腦：左鍵旋轉、右鍵平移、滾輪縮放）；點房間、或在下面那一排房間選一間飛過去。</li>
-            <li><b>AR</b>：用手機按「在你的桌上看（AR）」，把鏡頭對著桌面，整棟房子（約 25 × 19 公分）就放在桌上，可以繞著看、湊近看房間。iPhone 用 Safari、Android 用 Chrome。</li>
+            <li><b>3D</b>：一指拖曳旋轉、兩指平移和縮放（電腦：左鍵旋轉、右鍵平移、滾輪縮放）；點房間、或按「房間」從列表選一間飛過去。</li>
+            <li><b>AR</b>：用手機按「在桌上看」，把鏡頭對著桌面，整棟房子（約 25 × 19 公分）就放在桌上，可以繞著看、湊近看房間。iPhone 用 Safari、Android 用 Chrome。</li>
           </ul>
           <h3>計算方法</h3>
           <p class="formula">凸點數 ＝ 長度 ÷ 0.4 m<br>牆高 ＝ 6 層磚 ＝ 18 片薄板 ＝ 2.88 m</p>
@@ -168,7 +172,6 @@ import { computed, h, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import Mansion3D from './lego/Mansion3D.vue'
 import ArView from './components/ArView.vue'
 import BottomSheet from './components/BottomSheet.vue'
-import RoomStrip from './components/RoomStrip.vue'
 import { ROOMS, HALL } from './lego/layout.js'
 import { LEGO_PAL } from './lego/looks.js'
 import { SOURCES } from './lego/sources.js'
@@ -188,7 +191,7 @@ function setMode(m) {
   if (mode.value === m) return
   if (m === '3d') ready.value = false
   mode.value = m
-  active.value = hover.value = sheet.value = null
+  hover.value = sheet.value = null // 選到的房間留著：3D、AR 切過去還是看那一間
   history.replaceState(null, '', m === 'ar' ? '#ar' : location.pathname + location.search)
 }
 const onKey = (e) => {
@@ -207,6 +210,7 @@ const partName = (r) => { if (lang.value !== 'en') return r.name; for (const [li
 const view = ref('overview'), walls = ref('full'), labels = ref(true), roof = ref('auto'), outer = ref('auto'), court = ref(false), night = ref(false)
 const hover = ref(null), active = ref(null), parts = ref(null), scene = ref(null)
 const sheet = ref(null), tab = ref('about')
+const arView = ref(null), canAr = ref(false)
 
 const rooms = ROOMS
 const byId = Object.fromEntries(rooms.map((r) => [r.id, r]))
