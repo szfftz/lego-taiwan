@@ -12,16 +12,18 @@ const args = process.argv.slice(2)
 const base = args.find((a) => /^https?:/.test(a)) ?? 'http://localhost:8086'
 const OUT = fileURLToPath(new URL('../src/lego/data/ar/', import.meta.url))
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const PAGE = { lego: { file: 'mansion-lego' } }
+// 房名板是模型裡的貼圖：中、英文各匯一個（網頁照語言選）
+const PAGE = { zh: { file: 'mansion-lego' }, en: { file: 'mansion-lego-en' } }
 
 mkdirSync(OUT, { recursive: true })
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--use-gl=angle'], protocolTimeout: 300000 })
-for (const look of ['lego']) {
+const only = args.filter((a) => a === 'zh' || a === 'en') // 只匯一種語言：npm run export:ar en
+for (const look of only.length ? only : ['zh', 'en']) {
   const { file } = PAGE[look]
   const page = await browser.newPage()
   await page.setViewport({ width: 1400, height: 1000 })
   page.on('pageerror', (e) => console.error('頁面錯誤：', e.message))
-  await page.goto(`${base}/`, { waitUntil: 'domcontentloaded', timeout: 90000 }) // 不等 networkidle：頁面有時一直有請求，等不到
+  await page.goto(`${base}/?lang=${look}`, { waitUntil: 'domcontentloaded', timeout: 90000 }) // 不等 networkidle：頁面有時一直有請求，等不到
   await page.waitForFunction(() => window.__lego?.scene, { timeout: 90000 })
   await new Promise((r) => setTimeout(r, 3000))
   const res = await page.evaluate(async (lego) => {
@@ -36,7 +38,7 @@ for (const look of ['lego']) {
     await (await import('/src/dev/arLabels.js')).arLabelGroup(window.__lego.scene, window.__lego.labelGroup)
     const m = await import('/src/dev/arExport.js')
     return m.exportAr(window.__lego.scene, { size: 0.25, tag: tagOf, usdz: false }) // 最長邊 25 公分；usdz 由網頁按 AR 時現做
-  }, look === 'lego')
+  }, true)
   for (const k of ['glb']) {
     const buf = Buffer.from(res[k], 'base64')
     writeFileSync(`${OUT}${file}.${k}`, buf)

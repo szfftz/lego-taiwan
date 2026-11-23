@@ -187,3 +187,32 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
   .gesture { left: calc(env(safe-area-inset-left) + 12px); transform: none; bottom: calc(env(safe-area-inset-bottom) + 12px) !important; max-width: 44vw; }
   .ar-note:not(.warn) { display: none; }
 }
+
+/* ── 所有房間一排（3D 在操作列上面、AR 在 AR 按鈕上面），左右滑 ── */
+.strip { grid-column: 1 / -1; display: flex; gap: 6px; margin: 0 -12px; padding: 2px 12px 6px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-padding-inline: 12px; -webkit-overflow-scrolling: touch; }
+.strip::-webkit-scrollbar { display: none; }
+.strip button { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 58px; height: 44px; padding: 0 11px; border: 0; border-radius: 11px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 3px 0 rgba(29, 59, 79, 0.25); line-height: 1.15; white-space: nowrap; }
+.strip button b { font-size: 13.5px; font-weight: 800; }
+.strip button small { font-size: 10.5px; color: var(--muted); }
+.strip button.all { font-size: 13.5px; font-weight: 800; background: var(--ink); color: #fff; }
+.strip button.all:not(.on) { background: rgba(255, 255, 255, 0.94); color: var(--ink); }
+.strip button.on:not(.all) { background: #3ddc5a; box-shadow: 0 3px 0 #1f9a37; }
+.strip button.on:not(.all) small { color: #1d4a24; }
+.ar-strip { position: absolute; z-index: 2; left: 0; right: 0; margin: 0; bottom: calc(env(safe-area-inset-bottom) + 86px); padding-left: calc(env(safe-area-inset-left) + 12px); padding-right: calc(env(safe-area-inset-right) + 12px); }
+.ar-note:not(.warn) { top: calc(var(--ar-top, 60px) + 4px); bottom: auto; left: calc(env(safe-area-inset-left) + 12px); transform: none; }
+.ar-note.warn { bottom: calc(env(safe-area-inset-bottom) + 20px); }
+@media (min-width: 900px) {
+  .ar-strip { left: 150px; bottom: 24px; } /* 電腦：沒有 AR 按鈕，左邊讓給 QR code */
+  .ar-note:not(.warn) { bottom: auto; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .strip button { height: 36px; }
+  .strip button small { display: none; }
+  .ar-strip { bottom: calc(env(safe-area-inset-bottom) + 62px); }
+  .ar-note:not(.warn) { display: block; }
+}
+.round.lang { font-size: 14px; font-weight: 900; }
+:lang(en) .brand { letter-spacing: 0; }
+:lang(en) .brick small, :lang(en) .strip button small { letter-spacing: -0.01em; }
+:lang(en) .opt > span { width: 76px; }
+@media (max-width: 400px) { :lang(en) .brand { font-size: 15px; padding: 0 10px 0 8px; } :lang(en) .seg button { min-width: 38px; padding: 0 8px; } .top { gap: 6px; } }

@@ -18,6 +18,7 @@ import { brickify, buildBricks } from './brickify.js'
 import { loadParts, toLdr, PART_NAME } from './ldraw.js'
 import { WALLPAPER, WAINSCOT, LEGO_PAL, MC_PAL, FLOOR } from './looks.js'
 import { LOW } from '../lib/device.js'
+import { lang, roomText, whoText } from '../i18n.js'
 
 const props = defineProps({
   labels: { type: Boolean, default: true },
@@ -32,6 +33,13 @@ const props = defineProps({
   look: { type: String, default: 'lego' },
   insetTop: { type: Number, default: 0 }, // 上面、下面被操作列擋住幾 px：畫面中心挪到看得到的那一塊正中間
   insetBottom: { type: Number, default: 0 }, // 畫風：sims 模擬市民｜lego 樂高｜mc 當個創世神
+})
+// 標籤的字跟著語言（i18n.js）：房名、縣市、人物
+function relabel(o) { const t = roomText(o.userData.rm); o.element.innerHTML = `<b>${t.name}</b><span>${t.county}</span>` }
+watch(lang, () => {
+  for (const o of labelGroup.children) if (o.userData.rm) relabel(o)
+  for (const w of walkers) if (w.tag) w.tag.element.textContent = whoText(w.who)
+  tipName.value = ''
 })
 const emit = defineEmits(['hover', 'select', 'parts', 'ready'])
 
@@ -642,7 +650,7 @@ function buildPeople() {
     const p = props.look === 'lego' ? legoPerson(FACE.s, 'stand', w.shirt) : person(0, 0, FACE.s, 'stand', { shirt: w.shirt, pants: w.pants, hair: w.hair })
     p.scale.setScalar((w.kid ? 0.72 : 1) / M)
     p.userData.name = w.who
-    const el = document.createElement('div'); el.className = 'd25-label who'; el.textContent = w.who // 頭上顯示是誰
+    const el = document.createElement('div'); el.className = 'd25-label who'; el.textContent = whoText(w.who) // 頭上顯示是誰
     const tag = new CSS2DObject(el); tag.position.set(0, 2.05, 0); tag.visible = props.labels; p.add(tag)
     const fig = p.userData.legs ? p : p.children.find((c) => c.userData.legs) ?? p
     p.traverse((o) => { if (o.isMesh) o.castShadow = true })
@@ -650,7 +658,7 @@ function buildPeople() {
     const path = w.path.map(([x, z, y]) => [x, z, y ?? 0]) // 第三個數是腳底離地板多高（爬樓梯）
     for (let k = 1; k < path.length; k++) if (w.path[k][2] === undefined) path[k][2] = path[k - 1][2]
     const seg = path.slice(1).map((q, k) => Math.hypot(q[0] - path[k][0], q[1] - path[k][1], q[2] - path[k][2])), len = seg.reduce((a, b) => a + b, 0)
-    walkers.push({ p, fig, tag, path, seg, len, t: Math.random() * len * 2, kid: w.kid, plan: w.drive && car ? dadPlan(path) : null })
+    walkers.push({ who: w.who, p, fig, tag, path, seg, len, t: Math.random() * len * 2, kid: w.kid, plan: w.drive && car ? dadPlan(path) : null })
   }
 }
 // 走路：速度 0.9 m/s，到兩端各停 3 秒；面朝走的方向，身體上下晃
@@ -959,11 +967,12 @@ function buildHouse() {
     roomInfo[rm.id] = { cx: x + w / 2, cz: y + h / 2, size: Math.max(w, h, 3) }
     const el = document.createElement('div')
     el.className = 'd25-label'
-    el.innerHTML = `<b>${rm.name}</b><span>${rm.county}</span>`
     const o = new CSS2DObject(el)
+    o.userData.rm = rm
     o.position.set(x + w / 2, BASE + WALL_H + 0.5, y + h / 2)
     o.userData.id = rm.id
     labelGroup.add(o)
+    relabel(o)
   }
   placeArt()
   // 大門：門廊（四根白石柱撐起平頂雨遮、金色飾邊）、三階大理石台階、胡桃木雙開大門（金門把）、兩側壁燈、門口一對造型樹盆栽
@@ -1305,7 +1314,7 @@ function onMove(ev) {
   const r = wrap.value.getBoundingClientRect()
   tipXY.value = [ev.clientX - r.left + 14, ev.clientY - r.top + 12]
   if (tipQueued) return
-  tipQueued = requestAnimationFrame(() => { tipQueued = null; tipName.value = objectName(ev) })
+  tipQueued = requestAnimationFrame(() => { tipQueued = null; tipName.value = lang.value === 'zh' ? objectName(ev) : '' })
 }
 function onClick(ev) {
   if (downAt && Math.hypot(ev.clientX - downAt[0], ev.clientY - downAt[1]) > 4) return // 拖曳不算點
