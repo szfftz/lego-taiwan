@@ -1,6 +1,6 @@
 # 樂高台灣 LEGO Taiwan
 
-網頁：https://szfftz.github.io/logo-taiwan/（`npm run deploy` 之後才有）
+網頁：https://szfftz.github.io/lego-taiwan/（`npm run deploy` 之後才有）
 
 從 K30DayMapChallenge 2026 Day 27（New tool／Home Sweet Taiwan?）搬出來的手機版，做法同 birth-lottery：台灣是一棟用樂高蓋出來的豪宅，每個縣市一個房間，照經緯度排，平面圖就是台灣地圖。
 
@@ -17,7 +17,7 @@
 npm install
 npm run serve      # 開發（http://localhost:8086，同一個 Wi-Fi 的手機開終端機印出的 Network 網址）
 npm run build      # 建置到 dist/
-npm run deploy     # 建置並推到 gh-pages → https://szfftz.github.io/logo-taiwan/
+npm run deploy     # 建置並推到 gh-pages → https://szfftz.github.io/lego-taiwan/
 npm run export:ar  # 重新匯出 AR 模型（先開 npm run serve；要 Chrome）
 npm run fetch:ldraw  # 重新抓 LDraw 零件 → src/lego/data/lego-parts.mpd
 ```

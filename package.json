@@ -2,7 +2,7 @@
   "name": "lego-taiwan",
   "private": true,
   "version": "1.0.0",
-  "homepage": "https://szfftz.github.io/logo-taiwan/",
+  "homepage": "https://szfftz.github.io/lego-taiwan/",
   "type": "module",
   "scripts": {
     "serve": "vite",

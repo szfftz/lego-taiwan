@@ -8,7 +8,7 @@ npm run build
 cd dist
 rm -rf .git
 git init -q -b gh-pages
-git remote add origin https://github.com/szfftz/logo-taiwan.git
+git remote add origin https://github.com/szfftz/lego-taiwan.git
 git config user.name "szfftz"
 git config user.email "szfftz@users.noreply.github.com"
 # gh 的 active 帳號可能不是 szfftz，這裡固定用 szfftz 的 token
@@ -24,4 +24,4 @@ git push -f origin gh-pages
 rm -rf .git
 cd ..
 
-echo "✅ 部署完成！幾分鐘內會更新：https://szfftz.github.io/logo-taiwan/"
+echo "✅ 部署完成！幾分鐘內會更新：https://szfftz.github.io/lego-taiwan/"

@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url)))
 const built = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Taipei' }).slice(0, 16)
 
-// base './'：放到 GitHub Pages 子路徑（/logo-taiwan/）也讀得到
+// base './'：放到 GitHub Pages 子路徑（/lego-taiwan/）也讀得到
 // host：同一個 Wi-Fi 的手機可以直接開（終端機會印出 Network 網址；AR 要 https，手機上試 AR 請用部署後的網址）
 export default defineConfig({
   base: './',
